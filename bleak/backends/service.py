@@ -17,6 +17,7 @@ from bleak.backends.descriptor import BleakGATTDescriptor
 
 logger = logging.getLogger(__name__)
 
+
 class BleakGATTService(abc.ABC):
     """Interface for the Bleak representation of a GATT Service."""
 
@@ -51,6 +52,14 @@ class BleakGATTService(abc.ABC):
 
     @abc.abstractmethod
     def add_characteristic(self, characteristic: BleakGATTCharacteristic):
+        """Add a :py:class:`~BleakGATTCharacteristic` to the service.
+
+        Should not be used by end user, but rather by `bleak` itself.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def del_characteristic(self, characteristic: BleakGATTCharacteristic):
         """Add a :py:class:`~BleakGATTCharacteristic` to the service.
 
         Should not be used by end user, but rather by `bleak` itself.
@@ -124,7 +133,10 @@ class BleakGATTServiceCollection(object):
         if service.handle not in self.__services:
             self.__services[service.handle] = service
         else:
-            logger.warning("The service '%s' is already present in this BleakGATTServiceCollection!", service.handle)
+            logger.warning(
+                "The service '%s' is already present in this BleakGATTServiceCollection!",
+                service.handle,
+            )
 
     def get_service(self, specifier: Union[int, str, UUID]) -> BleakGATTService:
         """Get a service by handle (int) or UUID (str or uuid.UUID)"""
@@ -146,6 +158,10 @@ class BleakGATTServiceCollection(object):
             else:
                 return x[0] if x else None
 
+    def del_service(self, handle: int):
+        """Remove service by integer handle."""
+        self.__services.pop(handle)
+
     def add_characteristic(self, characteristic: BleakGATTCharacteristic):
         """Add a :py:class:`~BleakGATTCharacteristic` to the service collection.
 
@@ -157,7 +173,15 @@ class BleakGATTServiceCollection(object):
                 characteristic
             )
         else:
-            logger.warning("The characteristic '%s' is already present in this BleakGATTServiceCollection!", characteristic.handle)
+            logger.warning(
+                "The characteristic '%s' is already present in this BleakGATTServiceCollection!",
+                characteristic.handle,
+            )
+
+    def del_characteristic(self, handle: int):
+        """Remove a characteristic by integer handle."""
+        characteristic = self.__characteristics.pop(handle)
+        self.__services[characteristic.service_handle].del_characteristic(handle)
 
     def get_characteristic(
         self, specifier: Union[int, str, UUID]
@@ -191,7 +215,15 @@ class BleakGATTServiceCollection(object):
                 descriptor
             )
         else:
-            logger.warning("The descriptor '%s' is already present in this BleakGATTServiceCollection!", descriptor.handle)
+            logger.warning(
+                "The descriptor '%s' is already present in this BleakGATTServiceCollection!",
+                descriptor.handle,
+            )
+
+    def del_descriptor(self, handle: int):
+        """Remove a descriptor by integer handle."""
+        descriptor = self.__descriptors.pop(handle)
+        self.__characteristics[descriptor.characteristic_handle].del_descriptor(handle)
 
     def get_descriptor(self, handle: int) -> BleakGATTDescriptor:
         """Get a descriptor by integer handle"""
